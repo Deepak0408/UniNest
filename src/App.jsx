@@ -1,6 +1,6 @@
 import {Routes,Route,Navigate} from 'react-router-dom'
 import Layout from './components/Layout.jsx'
-import {RequireAuth,GuestOnly} from './auth.jsx'
+import {RequireAuth,RequireAdmin,GuestOnly} from './auth.jsx'
 import Gateway from './pages/Gateway.jsx'
 import Feed from './pages/Feed.jsx'
 import Discover from './pages/Discover.jsx'
@@ -14,6 +14,7 @@ import Login from './pages/Login.jsx'
 import Signup from './pages/Signup.jsx'
 import PrivacyPolicy from './pages/PrivacyPolicy.jsx'
 import TermsConditions from './pages/TermsConditions.jsx'
+import Admin from './pages/Admin.jsx'
 export default function App(){
   const guard=el=><RequireAuth>{el}</RequireAuth>
   return <Routes><Route element={<Layout/>}>
@@ -32,5 +33,6 @@ export default function App(){
     <Route path="events" element={guard(<Events/>)}/>
     <Route path="club-events" element={guard(<ClubEvents/>)}/>
     <Route path="lost-found" element={guard(<LostFound/>)}/>
+    <Route path="admin" element={<RequireAdmin><Admin/></RequireAdmin>}/>
     <Route path="*" element={<Navigate to="/" replace/>}/></Route></Routes>
 }

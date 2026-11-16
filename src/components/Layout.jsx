@@ -19,7 +19,7 @@ const nav=[
 const Section=({title,links})=><div><h4 className="kicker mb-3">{title}</h4><ul className="space-y-2 text-sm">{links.map(l=><li key={l}><a href="#" className="hover:text-primary-container hover:underline">{l}</a></li>)}</ul></div>
 
 export default function Layout(){
-  const {user,logout}=useAuth(),s=useSocial(),go=useNavigate(),desktopNoticeRef=useRef(null),mobileNoticeRef=useRef(null),noticeDialogRef=useRef(null),{pathname}=useLocation(),[open,setOpen]=useState(false),[noticeOpen,setNoticeOpen]=useState(false),[tick,setTick]=useState(0)
+  const {user,logout,isAdmin,maintenanceMode}=useAuth(),s=useSocial(),go=useNavigate(),desktopNoticeRef=useRef(null),mobileNoticeRef=useRef(null),noticeDialogRef=useRef(null),{pathname}=useLocation(),[open,setOpen]=useState(false),[noticeOpen,setNoticeOpen]=useState(false),[tick,setTick]=useState(0)
   const [dark,setDark]=useState(()=>{
     if(typeof window==='undefined')return false
     try{
@@ -80,6 +80,18 @@ export default function Layout(){
                 <span className="truncate">{label}</span>
               </NavLink>
             ))}
+
+            {/* Desktop Admin Dashboard Link - ONLY visible when logged in as Admin */}
+            {isAdmin&&(
+              <NavLink
+                to="/admin"
+                className={({isActive})=>`flex items-center gap-3.5 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition-all ${isActive?'bg-primary-container text-white shadow-sm':'text-ink-2 hover:bg-surface-low hover:text-primary-container'}`}
+              >
+                <Icon n="admin_panel_settings" className="text-2xl text-amber-700 dark:text-amber-400"/>
+                <span className="truncate flex-1">Admin Panel</span>
+                <span className="pill-gold text-[9px] !py-0 !px-1.5 uppercase font-bold tracking-wider">Admin</span>
+              </NavLink>
+            )}
 
             {/* Desktop Notifications Button */}
             {user&&(
@@ -262,6 +274,17 @@ export default function Layout(){
                 <span>{label}</span>
               </NavLink>
             ))}
+            {isAdmin&&(
+              <NavLink
+                to="/admin"
+                onClick={()=>setOpen(false)}
+                className={({isActive})=>`flex items-center gap-3 rounded-2xl px-4 py-2.5 text-sm font-semibold transition ${isActive?'bg-primary-container text-white':'text-ink-2 hover:bg-surface-low'}`}
+              >
+                <Icon n="admin_panel_settings" className="text-amber-700 dark:text-amber-400"/>
+                <span className="flex-1">Admin Panel</span>
+                <span className="pill-gold text-[9px] !py-0 !px-1.5 uppercase font-bold">Admin</span>
+              </NavLink>
+            )}
             {user?(
               <div className="border-t border-outline-variant pt-3 flex items-center justify-between">
                 <Link to={`/u/${user.uid}`} onClick={()=>setOpen(false)} className="flex items-center gap-2">
@@ -283,6 +306,19 @@ export default function Layout(){
 
         {/* Main Content View */}
         <main className="flex-1 mx-auto w-full max-w-[1200px] px-4 md:px-10 py-6 md:py-8 space-y-8 pb-20 md:pb-8">
+          {maintenanceMode&&(
+            <div role="alert" className="rounded-2xl border border-amber-600/60 bg-amber-500/10 p-3.5 text-xs text-amber-800 dark:text-amber-300 flex items-center justify-between gap-3 shadow-sm">
+              <div className="flex items-center gap-2">
+                <Icon n="construction" className="text-base text-amber-600"/>
+                <span><b>Campus Maintenance Active:</b> Some campus services may be temporarily limited during scheduled administrative maintenance.</span>
+              </div>
+              {isAdmin&&(
+                <Link to="/admin" className="font-semibold text-[10px] uppercase tracking-wider bg-amber-600 text-white px-2.5 py-1 rounded-full shrink-0">
+                  Manage Settings
+                </Link>
+              )}
+            </div>
+          )}
           <Outlet/>
         </main>
 

@@ -1,5 +1,5 @@
 import {createContext,useContext,useEffect,useState} from 'react'
-import {useAuth,isVerifiedEmail} from './auth.jsx'
+import {useAuth,isVerifiedEmail,isSuspendedUser} from './auth.jsx'
 import {
   collection,
   doc,
@@ -17,7 +17,7 @@ import {db,isFirebaseConfigured} from './lib/firebase.js'
 const K='uninest.social',H=36e5,CLAIM_RETENTION=7*24*H,rid=()=>Math.random().toString(36).slice(2,9),remoteId=()=>crypto.randomUUID()
 const SAMPLE_IDS=new Set(['p1','p2','p3','t1','t2','t3','ce1','ce2'])
 const SAMPLE_USERS=new Set(['aditi.v','kartik.s','sneha.p','ananya.s','rohan.m','priyanshu.d'])
-const emptyDb=()=>({posts:[],teams:[],conn:{},requests:[],notifications:[],msgs:[],clubEvents:[],lostFound:[],commentReports:[]})
+const emptyDb=()=>({posts:[],teams:[],conn:{},requests:[],notifications:[],msgs:[],clubEvents:[],lostFound:[],commentReports:[],announcements:[]})
 const notificationFailure=error=>{
   const message=error?.message||''
   return message.toLowerCase().includes('failed to fetch')
@@ -34,7 +34,8 @@ const cleanSampleData=db=>({
   msgs:(db.msgs||[]).filter(item=>!SAMPLE_USERS.has(item.a)&&!SAMPLE_USERS.has(item.b)),
   conn:Object.fromEntries(Object.entries(db.conn||{}).filter(([uid])=>!SAMPLE_USERS.has(uid)).map(([uid,ids])=>[uid,(ids||[]).filter(id=>!SAMPLE_USERS.has(id))])),
   requests:(db.requests||[]).filter(item=>!SAMPLE_USERS.has(item.from)&&!SAMPLE_USERS.has(item.to)),
-  notifications:(db.notifications||[]).filter(item=>!SAMPLE_USERS.has(item.to))
+  notifications:(db.notifications||[]).filter(item=>!SAMPLE_USERS.has(item.to)),
+  announcements:db.announcements||[]
 })
 
 const Ctx=createContext(null)
@@ -211,7 +212,11 @@ export function SocialProvider({children}){
   const pick=(a,id)=>a.find(x=>x.id===id)
   const clubEmails=['club@uninest.example','ai.club@uninest.example']
   const isClubMember=!!user&&clubEmails.includes(user.email)
-  const requirePostAccess=()=>{if(!user)throw new Error('Please log in before creating posts.')}
+  const requirePostAccess=()=>{
+    if(!user)throw new Error('Please log in before creating posts.')
+    const suspended=isSuspendedUser(user.email)||isSuspendedUser(user.uid)
+    if(suspended)throw new Error(`Your account has been suspended until ${suspended.expiresAt?new Date(suspended.expiresAt).toLocaleDateString():'further notice'}. Reason: ${suspended.reason}`)
+  }
 
   const api={
     me,
@@ -475,6 +480,39 @@ export function SocialProvider({children}){
       }
       upd(d=>{const local=pick(d.lostFound,id);if(local){local.claimed=true;local.claimedAt=claimedAt}return d})
     },
+    adminDeletePost:async id=>{
+      if(db){
+        try{await deleteDoc(doc(db,'posts',id))}catch(e){console.warn('Firestore post delete error:',e)}
+      }
+      setRemotePosts(current=>current.filter(item=>item.id!==id))
+      upd(d=>({...d,posts:(d.posts||[]).filter(p=>p.id!==id),commentReports:(d.commentReports||[]).filter(r=>r.itemId!==id)}))
+    },
+    adminTogglePinPost:async id=>{
+      const post=posts.find(item=>item.id===id)
+      if(!post)return
+      const nextPinned=!post.pinned
+      if(db){
+        try{await updateDoc(doc(db,'posts',id),{pinned:nextPinned})}catch(e){console.warn('Firestore post pin error:',e)}
+        setRemotePosts(current=>current.map(item=>item.id===id?{...item,pinned:nextPinned}:item))
+      }
+      upd(d=>{const p=pick(d.posts,id);if(p)p.pinned=nextPinned;return d})
+    },
+    adminDismissReport:reportId=>upd(d=>({...d,commentReports:(d.commentReports||[]).filter(r=>r.id!==reportId)})),
+    adminClearAllReports:()=>upd(d=>({...d,commentReports:[]})),
+    adminDeleteLostFound:async id=>{
+      if(db){
+        try{await deleteDoc(doc(db,'lost_found',id))}catch(e){console.warn('Firestore lost_found delete error:',e)}
+      }
+      setRemoteLostFound(current=>current.filter(item=>item.id!==id))
+      upd(d=>({...d,lostFound:(d.lostFound||[]).filter(item=>item.id!==id)}))
+    },
+    adminAddAnnouncement:ann=>{
+      const item={id:rid(),t:Date.now(),by:user?.name||'Campus Administration',badge:ann.badge||'Official Alert',title:ann.title,content:ann.content,link:ann.link||''}
+      upd(d=>({...d,announcements:[item,...(d.announcements||[])]}))
+      return item
+    },
+    adminDeleteAnnouncement:id=>upd(d=>({...d,announcements:(d.announcements||[]).filter(a=>a.id!==id)})),
+    announcements:dbState.announcements||[],
     shared:p=>p.interests.filter(i=>user?.interests?.includes(i))
   }
 

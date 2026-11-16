@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UniNest Admin Dashboard Preview</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,500&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
+  <style>
+    .material-symbols-outlined {
+      font-size: 20px;
+      line-height: 1;
+      vertical-align: middle;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(150, 131, 129, 0.4);
+      border-radius: 9999px;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.98); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .animate-fadeIn {
+      animation: fadeIn 0.18s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-4 m-0 font-sans custom-scrollbar select-none min-h-screen">
+
+  <div class="max-w-6xl mx-auto space-y-6">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="hidden fixed bottom-6 right-6 z-50 rounded-2xl bg-red-900 text-white px-5 py-3 shadow-2xl flex items-center gap-3 text-xs font-semibold animate-bounce">
+      <span class="material-symbols-outlined text-lg">check_circle</span>
+      <span id="toastMsg">Action completed successfully</span>
+    </div>
+
+    <!-- Header Banner -->
+    <header class="p-6 rounded-3xl border border-[var(--card-border)] bg-[var(--card)] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div class="space-y-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="inline-flex items-center rounded-full bg-red-100 dark:bg-red-950/80 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-red-900 dark:text-red-300">
+            Campus Control Center
+          </span>
+          <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-950/80 px-2.5 py-0.5 text-[10px] font-bold text-amber-900 dark:text-amber-300">
+            <span class="material-symbols-outlined text-xs">shield_person</span> Admin: @kumar.aditya
+          </span>
+          <span class="inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-950/80 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
+            Firebase Synced
+          </span>
+          <span id="maintBadge" class="hidden inline-flex items-center gap-1 rounded-full bg-red-600 text-white px-2 py-0.5 text-[10px] font-bold">
+            <span class="material-symbols-outlined text-xs">construction</span> Maintenance Active
+          </span>
+        </div>
+        <h1 class="text-2xl md:text-3xl font-serif font-bold text-[var(--foreground)]">UniNest Administration & Analytics</h1>
+        <p class="text-xs text-[var(--muted-foreground)] max-w-2xl leading-relaxed">
+          Active administrative session. Monitor weekly engagement trends, oversee student suspensions and permanent bans, resolve moderation flags, and control campus operations.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="showToast('Exported complete JSON database backup.')" class="inline-flex items-center gap-1.5 rounded-full border border-[var(--card-border)] hover:border-red-800 px-3.5 py-2 text-xs font-semibold text-[var(--foreground)] hover:bg-[var(--card)] transition">
+          <span class="material-symbols-outlined text-sm">download</span> Export Backup
+        </button>
+        <button onclick="toggleMaintenance()" id="maintBtn" class="inline-flex items-center gap-1.5 rounded-full border border-amber-600/60 px-3.5 py-2 text-xs font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-500/10 transition">
+          <span class="material-symbols-outlined text-sm">construction</span> Maintenance Mode
+        </button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="flex items-center gap-2 overflow-x-auto pb-1 border-b border-[var(--card-border)] custom-scrollbar" aria-label="Sections">
+      <button onclick="switchTab('analytics')" id="tab-analytics" class="tab-btn flex items-center gap-2 whitespace-nowrap rounded-2xl px-4 py-2.5 text-xs font-semibold transition bg-red-900 text-white shadow-sm">
+        <span class="material-symbols-outlined text-base">insights</span> Analytics & Graphs
+      </button>
+      <button onclick="switchTab('users')" id="tab-users" class="tab-btn flex items-center gap-2 whitespace-nowrap rounded-2xl px-4 py-2.5 text-xs font-semibold transition text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+        <span class="material-symbols-outlined text-base">group</span> Students & IDs (6)
+      </button>
+      <button onclick="switchTab('restrictions')" id="tab-restrictions" class="tab-btn flex items-center gap-2 whitespace-nowrap rounded-2xl px-4 py-2.5 text-xs font-semibold transition text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+        <span class="material-symbols-outlined text-base">shield_lock</span> Suspensions & Bans
+        <span id="restrBadge" class="grid h-4 min-w-4 place-items-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white">2</span>
+      </button>
+      <button onclick="switchTab('posts')" id="tab-posts" class="tab-btn flex items-center gap-2 whitespace-nowrap rounded-2xl px-4 py-2.5 text-xs font-semibold transition text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+        <span class="material-symbols-outlined text-base">dynamic_feed</span> Feed & Posts
+      </button>
+      <button onclick="switchTab('moderation')" id="tab-moderation" class="tab-btn flex items-center gap-2 whitespace-nowrap rounded-2xl px-4 py-2.5 text-xs font-semibold transition text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+        <span class="material-symbols-outlined text-base">flag</span> Reports & Flags
+        <span class="grid h-4 min-w-4 place-items-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white">1</span>
+      </button>
+      <button onclick="switchTab('audit')" id="tab-audit" class="tab-btn flex items-center gap-2 whitespace-nowrap rounded-2xl px-4 py-2.5 text-xs font-semibold transition text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+        <span class="material-symbols-outlined text-base">history</span> Audit Log
+      </button>
+    </nav>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 1: ANALYTICS & WEEKLY USER ACTIVITY GRAPHS -->
+    <!-- ========================================================================= -->
+    <div id="content-analytics" class="tab-content space-y-6">
+      <!-- 4 Top Stat Cards -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="p-5 rounded-3xl border border-[var(--card-border)] bg-[var(--card)] space-y-1">
+          <div class="flex items-center justify-between text-[var(--muted-foreground)]">
+            <span class="text-[10px] font-bold uppercase tracking-wider">Weekly Active Users</span>
+            <span class="material-symbols-outlined text-red-900 dark:text-red-400 text-xl">trending_up</span>
+          </div>
+          <div class="text-3xl font-serif font-bold text-[var(--foreground)]">248</div>
+          <div class="text-xs text-emerald-600 font-medium flex items-center gap-1">
+            <span class="material-symbols-outlined text-xs">arrow_upward</span> +18.4% vs last week · DAU: 54
+          </div>
+        </div>
+
+        <div class="p-5 rounded-3xl border border-[var(--card-border)] bg-[var(--card)] space-y-1">
+          <div class="flex items-center justify-between text-[var(--muted-foreground)]">
+            <span class="text-[10px] font-bold uppercase tracking-wider">Verified Campus IDs</span>
+            <span class="material-symbols-outlined text-emerald-600 text-xl">verified</span>
+          </div>
+          <div class="text-3xl font-serif font-bold text-[var(--foreground)]">83%</div>
+          <div class="text-xs text-[var(--muted-foreground)]">
+            5 of 6 active student accounts verified with university email
+          </div>
+        </div>
+
+        <div class="p-5 rounded-3xl border border-[var(--card-border)] bg-[var(--card)] space-y-1">
+          <div class="flex items-center justify-between text-[var(--muted-foreground)]">
+            <span class="text-[10px] font-bold uppercase tracking-wider">Weekly Interactions</span>
+            <span class="material-symbols-outlined text-red-900 dark:text-red-400 text-xl">forum</span>
+          </div>
+          <div class="text-3xl font-serif font-bold text-[var(--foreground)]">142</div>
+          <div class="text-xs text-[var(--muted-foreground)]">
+            Peak Day: <b class="text-[var(--foreground)]">Friday</b> (38 interactions)
+          </div>
+        </div>
+
+        <div class="p-5 rounded-3xl border border-[var(--card-border)] bg-[var(--card)] space-y-1">
+          <div class="flex items-center justify-between text-[var(--muted-foreground)]">
+            <span class="text-[10px] font-bold uppercase tracking-wider">Safety & Moderation</span>
+            <span class="material-symbols-outlined text-amber-600 text-xl">shield</span>
+          </div>
+          <div class="text-3xl font-serif font-bold text-[var(--foreground)]">1 Flag</div>
+          <div class="text-xs text-[var(--muted-foreground)]">
+            1 suspended ID · 1 banned email
+          </div>
+        </div>
+      </div>
+
+      <!-- Graph 1: Weekly Activity Chart & Donut Breakdown -->
+      <div class="grid lg:grid-cols-12 gap-6">
+        <!-- Day by Day Visual Chart -->
+        <div class="p-6 rounded-3xl border border-[var(--card-border)] bg-[var(--card)] lg:col-span-8 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h2 class="text-lg font-bold">Weekly Interaction Trend (Past 7 Days)</h2>
+              <p class="text-xs text-[var(--muted-foreground)]">Posts, comments, and lost & found reports across the campus week</p>
+            </div>
+            <div class="flex items-center gap-3 text-xs">
+              <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-red-900 dark:bg-red-500"></span> Posts</span>
+              <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-emerald-600"></span> Replies</span>
+              <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-amber-500"></span> Lost & Found</span>
+            </div>
+          </div>
+
+          <div class="pt-4 h-64 flex items-end justify-between gap-3 px-2 pb-6 border-b border-[var(--card-border)]">
+            <!-- Mon -->
+            <div class="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+              <span class="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] bg-neutral-900 text-white rounded px-1.5 py-0.5">18 events</span>
+              <div class="w-full max-w-[36px] flex items-end justify-center gap-1">
+                <div style="height: 60px;" class="w-1/3 rounded-t bg-red-900 dark:bg-red-500"></div>
+                <div style="height: 45px;" class="w-1/3 rounded-t bg-emerald-600"></div>
+                <div style="height: 25px;" class="w-1/3 rounded-t bg-amber-500"></div>
+              </div>
+              <span class="text-xs font-semibold">Mon</span>
+            </div>
+            <!-- Tue -->
+            <div class="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+              <span class="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] bg-neutral-900 text-white rounded px-1.5 py-0.5">24 events</span>
+              <div class="w-full max-w-[36px] flex items-end justify-center gap-1">
+                <div style="height: 80px;" class="w-1/3 rounded-t bg-red-900 dark:bg-red-500"></div>
+                <div style="height: 65px;" class="w-1/3 rounded-t bg-emerald-600"></div>
+                <div style="height: 30px;" class="w-1/3 rounded-t bg-amber-500"></div>
+              </div>
+              <span class="text-xs font-semibold">Tue</span>
+            </div>
+            <!-- Wed -->
+            <div class="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+              <span class="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] bg-neutral-900 text-white rounded px-1.5 py-0.5">29 events</span>
+              <div class="w-full max-w-[36px] flex items-end justify-center gap-1">
+                <div style="height: 95px;" class="w-1/3 rounded-t bg-red-900 dark:bg-red-500"></div>
+                <div style="height: 80px;" class="w-1/3 rounded-t bg-emerald-600"></div>
+                <div style="height: 40px;" class="w-1/3 rounded-t bg-amber-500"></div>
+              </div>
+              <span class="text-xs font-semibold">Wed</span>
+            </div>
+            <!-- Thu -->
+            <div class="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+              <span class="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] bg-neutral-900 text-white rounded px-1.5 py-0.5">31 events</span>
+              <div class="w-full max-w-[36px] flex items-end justify-center gap-1">
+                <div style="height: 110px;" class="w-1/3 rounded-t bg-red-900 dark:bg-red-500"></div>
+                <div style="height: 90px;" class="w-1/3 rounded-t bg-emerald-600"></div>
+                <div style="height: 35px;" class="w-1/3 rounded-t bg-amber-500"></div>
+              </div>
+              <span class="text-xs font-semibold">Thu</span>
+            </div>
+            <!-- Fri (Peak) -->
+            <div class="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+              <span class="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] bg-neutral-900 text-white rounded px-1.5 py-0.5 font-bold text-amber-300">Peak: 38</span>
+              <div class="w-full max-w-[36px] flex items-end justify-center gap-1">
+                <div style="height: 145px;" class="w-1/3 rounded-t bg-red-900 dark:bg-red-500 shadow-md"></div>
+                <div style="height: 120px;" class="w-1/3 rounded-t bg-emerald-600 shadow-md"></div>
+                <div style="height: 60px;" class="w-1/3 rounded-t bg-amber-500 shadow-md"></div>
+              </div>
+              <span class="text-xs font-bold text-red-900 dark:text-red-400">Fri ★</span>
+            </div>
+            <!-- Sat -->
+            <div class="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+              <span class="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] bg-neutral-900 text-white rounded px-1.5 py-0.5">22 events</span>
+              <div class="w-full max-w-[36px] flex items-end justify-center gap-1">
+                <div style="height: 75px;" class="w-1/3 rounded-t bg-red-900 dark:bg-red-500"></div>
+                <div style="height: 70px;" class="w-1/3 rounded-t bg-emerald-600"></div>
+                <div style="height: 20px;" class="w-1/3 rounded-t bg-amber-500"></div>
+              </div>
+              <span class="text-xs font-semibold">Sat</span>
+            </div>
+            <!-- Sun -->
+            <div class="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+              <span class="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] bg-neutral-900 text-white rounded px-1.5 py-0.5">16 events</span>
+              <div class="w-full max-w-[36px] flex items-end justify-center gap-1">
+                <div style="height: 50px;" class="w-1/3 rounded-t bg-red-900 dark:bg-red-500"></div>
+                <div style="height: 40px;" class="w-1/3 rounded-t bg-emerald-600"></div>
+                <div style="height: 15px;" class="w-1/3 rounded-t bg-amber-500"></div>
+              </div>
+              <span class="text-xs font-semibold">Sun</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Donut Engagement Chart -->
+        <div class="p-6 rounded-3xl border border-[var(--card-border)] bg-[var(--card)] lg:col-span-4 flex flex-col justify-between space-y-4">
+          <div>
+            <h2 class="text-lg font-bold">Engagement Ratio</h2>
+            <p className="text-xs text-[var(--muted-foreground)]">Breakdown by campus category</p>
+          </div>
+
+          <div class="py-2 flex flex-col items-center">
+            <div class="relative h-40 w-40">
+              <svg viewBox="0 0 36 36" class="h-full w-full -rotate-90">
+                <circle cx="18" cy="18" r="15.915" fill="none" stroke="currentColor" stroke-width="3" class="text-neutral-200 dark:text-neutral-800"/>
+                <!-- Posts: 42% -->
+                <circle cx="18" cy="18" r="15.915" fill="none" stroke="#80302b" stroke-width="3.6" stroke-dasharray="42 58" stroke-dashoffset="0"/>
+                <!-- Comments: 34% -->
+                <circle cx="18" cy="18" r="15.915" fill="none" stroke="#3a6753" stroke-width="3.6" stroke-dasharray="34 66" stroke-dashoffset="-42"/>
+                <!-- Lost: 16% -->
+                <circle cx="18" cy="18" r="15.915" fill="none" stroke="#d97706" stroke-width="3.6" stroke-dasharray="16 84" stroke-dashoffset="-76"/>
+                <!-- Events: 8% -->
+                <circle cx="18" cy="18" r="15.915" fill="none" stroke="#2563eb" stroke-width="3.6" stroke-dasharray="8 92" stroke-dashoffset="-92"/>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                <span class="text-2xl font-serif font-bold text-[var(--foreground)]">142</span>
+                <span class="text-[10px] uppercase font-bold text-[var(--muted-foreground)]">Events</span>
+              </div>
+            </div>
+
+            <div class="mt-4 w-full space-y-1 text-xs">
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-[#80302b]"></span> Discussions</span>
+                <span class="font-semibold">42%</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-[#3a6753]"></span> Comment Replies</span>
+                <span class="font-semibold">34%</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-[#d97706]"></span> Lost & Found</span>
+                <span class="font-semibold">16%</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-[#2563eb]"></span> Club RSVPs</span>
+                <span class="font-semibold">8%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Graph 2: Department Enrollment & Peak Hours -->
+      <div class="grid lg:grid-cols-12 gap-6">
+        <div class="p-6 rounded-3xl border border-[var(--card-border)] bg-[var(--card)] lg:col-span-7 space-y-4">
+          <h2 class="text-lg font-bold">Enrollment Distribution by Academic Stream</h2>
+          <div class="space-y-3 pt-2 text-xs">
+            <div class="space-y-1">
+              <div class="flex justify-between font-medium"><span>BTech CSE Core</span><span>42% (68 students)</span></div>
+              <div class="h-2 rounded-full bg-neutral-200 dark:bg-neutral-800 overflow-hidden"><div class="h-full bg-red-900 dark:bg-red-500 rounded-full" style="width: 42%;"></div></div>
+            </div>
+            <div class="space-y-1">
+              <div class="flex justify-between font-medium"><span>BTech CSE AI/ML</span><span>31% (50 students)</span></div>
+              <div class="h-2 rounded-full bg-neutral-200 dark:bg-neutral-800 overflow-hidden"><div class="h-full bg-red-900 dark:bg-red-500 rounded-full" style="width: 31%;"></div></div>
+            </div>
+            <div class="space-y-1">
+              <div class="flex justify-between font-medium"><span>BTech Data Science</span><span>14% (23 students)</span></div>
+              <div class="h-2 rounded-full bg-neutral-200 dark:bg-neutral-800 overflow-hidden"><div class="h-full bg-red-900 dark:bg-red-500 rounded-full" style="width: 14%;"></div></div>
+            </div>
+            <div class="space-y-1">
+              <div class="flex justify-between font-medium"><span>ECE & Robotics</span><span>8% (13 students)</span></div>
+              <div class="h-2 rounded-full bg-neutral-200 dark:bg-neutral-800 overflow-hidden"><div class="h-full bg-red-900 dark:bg-red-500 rounded-full" style="width: 8%;"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-6 rounded-3xl border border-[var(--card-border)] bg-[var(--card)] lg:col-span-5 space-y-4">
+          <h2 class="text-lg font-bold">Campus Peak Activity Times</h2>
+          <div class="space-y-2.5 text-xs">
+            <div class="p-2.5 rounded-xl border border-[var(--card-border)] flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-amber-500 text-base">wb_twilight</span>
+                <span>Evening Social (17:00 - 21:00)</span>
+              </div>
+              <span class="font-bold text-red-900 dark:text-red-400">92% (Peak)</span>
+            </div>
+            <div class="p-2.5 rounded-xl border border-[var(--card-border)] flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-indigo-500 text-base">bedtime</span>
+                <span>Late Night Study (21:00 - 02:00)</span>
+              </div>
+              <span class="font-bold">78%</span>
+            </div>
+            <div class="p-2.5 rounded-xl border border-[var(--card-border)] flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-amber-600 text-base">sunny</span>
+                <span>Afternoon Mess (12:00 - 17:00)</span>
+              </div>
+              <span class="font-bold">65%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 2: STUDENTS & ID MANAGEMENT (SUSPEND / BAN / VERIFY) -->
+    <!-- ========================================================================= -->
+    <div id="content-users" class="tab-content hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold">Registered Students & Campus IDs</h2>
+          <p class="text-xs text-[var(--muted-foreground)]">Grant verified student badges, issue temporary suspensions, or ban malicious users.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="text" id="userSearchInput" onkeyup="filterUserTable()" placeholder="Search name, @uid, email..." class="rounded-xl border border-[var(--card-border)] bg-[var(--card)] px-3 py-1.5 text-xs outline-none w-52" />
+          <select id="userStatusSelect" onchange="filterUserTable()" class="rounded-xl border border-[var(--card-border)] bg-[var(--card)] px-3 py-1.5 text-xs outline-none">
+            <option value="all">All Accounts</option>
+            <option value="verified">Verified Only</option>
+            <option value="suspended">Suspended</option>
+            <option value="banned">Banned</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="rounded-3xl border border-[var(--card-border)] bg-[var(--card)] overflow-hidden shadow-sm">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-neutral-100 dark:bg-neutral-900 border-b border-[var(--card-border)] font-semibold text-[var(--muted-foreground)]">
+            <tr>
+              <th class="py-3 px-4">Student</th>
+              <th class="py-3 px-4">University Email</th>
+              <th class="py-3 px-4">Stream & Year</th>
+              <th class="py-3 px-4">Status Badges</th>
+              <th class="py-3 px-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody" class="divide-y divide-[var(--card-border)]">
+            <!-- Aditi -->
+            <tr class="hover:bg-neutral-50 dark:hover:bg-neutral-900/40 transition">
+              <td class="py-3 px-4 flex items-center gap-3">
+                <span class="grid h-9 w-9 place-items-center rounded-full bg-red-100 text-red-900 font-bold text-sm">A</span>
+                <div>
+                  <div class="font-semibold flex items-center gap-1">Aditi Verma <span class="text-blue-500 font-bold text-xs" title="Verified">✓</span></div>
+                  <div class="text-[10px] text-[var(--muted-foreground)] font-mono">@aditi.v</div>
+                </div>
+              </td>
+              <td class="py-3 px-4 font-mono text-[11px]">aditi.verma@sudoon.ac.in</td>
+              <td class="py-3 px-4">BTech CSE AI/ML · Yr 1</td>
+              <td class="py-3 px-4"><span class="rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2.5 py-0.5 text-[10px] font-bold">Verified</span></td>
+              <td class="py-3 px-4 text-right space-x-1.5">
+                <button onclick="openSuspendModal('aditi.v', 'Aditi Verma', 'aditi.verma@sudoon.ac.in')" class="rounded-full border border-amber-600/70 text-amber-700 dark:text-amber-400 px-2.5 py-1 text-[11px] font-semibold hover:bg-amber-500/10">Suspend ID</button>
+                <button onclick="openBanModal('aditi.verma@sudoon.ac.in', 'Aditi Verma')" class="rounded-full border border-red-600/70 text-red-600 px-2.5 py-1 text-[11px] font-semibold hover:bg-red-500/10">Ban</button>
+              </td>
+            </tr>
+
+            <!-- Kartik (Suspended Example) -->
+            <tr id="row-kartik" class="bg-amber-500/5 hover:bg-amber-500/10 transition">
+              <td class="py-3 px-4 flex items-center gap-3">
+                <span class="grid h-9 w-9 place-items-center rounded-full bg-amber-100 text-amber-900 font-bold text-sm">K</span>
+                <div>
+                  <div class="font-semibold">Kartik Sharma</div>
+                  <div class="text-[10px] text-[var(--muted-foreground)] font-mono">@kartik.s</div>
+                </div>
+              </td>
+              <td class="py-3 px-4 font-mono text-[11px]">kartik.s@sudoon.ac.in</td>
+              <td class="py-3 px-4">BTech CSE Core · Yr 3</td>
+              <td class="py-3 px-4"><span id="badge-kartik" class="rounded-full bg-amber-600 text-white px-2 py-0.5 text-[10px] font-bold">Suspended (7d)</span></td>
+              <td class="py-3 px-4 text-right space-x-1.5">
+                <button id="btn-kartik-susp" onclick="toggleKartikSuspension()" class="rounded-full border border-emerald-600 text-emerald-600 px-2.5 py-1 text-[11px] font-semibold hover:bg-emerald-500/10">Lift Suspension</button>
+                <button onclick="openBanModal('kartik.s@sudoon.ac.in', 'Kartik Sharma')" class="rounded-full border border-red-600/70 text-red-600 px-2.5 py-1 text-[11px] font-semibold hover:bg-red-500/10">Ban</button>
+              </td>
+            </tr>
+
+            <!-- Ananya -->
+            <tr class="hover:bg-neutral-50 dark:hover:bg-neutral-900/40 transition">
+              <td class="py-3 px-4 flex items-center gap-3">
+                <span class="grid h-9 w-9 place-items-center rounded-full bg-purple-100 text-purple-900 font-bold text-sm">A</span>
+                <div>
+                  <div class="font-semibold flex items-center gap-1">Ananya Singh <span class="text-blue-500 font-bold text-xs">✓</span></div>
+                  <div class="text-[10px] text-[var(--muted-foreground)] font-mono">@ananya.s</div>
+                </div>
+              </td>
+              <td class="py-3 px-4 font-mono text-[11px]">ananya.it@sudoon.ac.in</td>
+              <td class="py-3 px-4">BTech IT · Yr 2</td>
+              <td class="py-3 px-4"><span class="rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2.5 py-0.5 text-[10px] font-bold">Verified</span></td>
+              <td class="py-3 px-4 text-right space-x-1.5">
+                <button onclick="openSuspendModal('ananya.s', 'Ananya Singh', 'ananya.it@sudoon.ac.in')" class="rounded-full border border-amber-600/70 text-amber-700 dark:text-amber-400 px-2.5 py-1 text-[11px] font-semibold hover:bg-amber-500/10">Suspend ID</button>
+                <button onclick="openBanModal('ananya.it@sudoon.ac.in', 'Ananya Singh')" class="rounded-full border border-red-600/70 text-red-600 px-2.5 py-1 text-[11px] font-semibold hover:bg-red-500/10">Ban</button>
+              </td>
+            </tr>
+
+            <!-- Rohan -->
+            <tr class="hover:bg-neutral-50 dark:hover:bg-neutral-900/40 transition">
+              <td class="py-3 px-4 flex items-center gap-3">
+                <span class="grid h-9 w-9 place-items-center rounded-full bg-blue-100 text-blue-900 font-bold text-sm">R</span>
+                <div>
+                  <div class="font-semibold">Rohan Mehra</div>
+                  <div class="text-[10px] text-[var(--muted-foreground)] font-mono">@rohan.m</div>
+                </div>
+              </td>
+              <td class="py-3 px-4 font-mono text-[11px]">rohan.ece@sudoon.ac.in</td>
+              <td class="py-3 px-4">BTech ECE · Yr 3</td>
+              <td class="py-3 px-4"><span class="rounded-full bg-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-300 px-2.5 py-0.5 text-[10px] font-bold">Pending ID</span></td>
+              <td class="py-3 px-4 text-right space-x-1.5">
+                <button onclick="showToast('Granted verified badge to @rohan.m')" class="rounded-full border border-emerald-600 text-emerald-600 px-2.5 py-1 text-[11px] font-semibold hover:bg-emerald-500/10">Verify ID</button>
+                <button onclick="openSuspendModal('rohan.m', 'Rohan Mehra', 'rohan.ece@sudoon.ac.in')" class="rounded-full border border-amber-600/70 text-amber-700 dark:text-amber-400 px-2.5 py-1 text-[11px] font-semibold hover:bg-amber-500/10">Suspend ID</button>
+              </td>
+            </tr>
+
+            <!-- Spammer (Banned Example) -->
+            <tr class="bg-red-500/5 hover:bg-red-500/10 transition">
+              <td class="py-3 px-4 flex items-center gap-3">
+                <span class="grid h-9 w-9 place-items-center rounded-full bg-red-200 text-red-900 font-bold text-sm">S</span>
+                <div>
+                  <div class="font-semibold line-through text-red-900 dark:text-red-300">Spam Bot Account</div>
+                  <div class="text-[10px] text-[var(--muted-foreground)] font-mono">@spammer.bot</div>
+                </div>
+              </td>
+              <td class="py-3 px-4 font-mono text-[11px]">badactor@spammer.net</td>
+              <td class="py-3 px-4">Unknown</td>
+              <td class="py-3 px-4"><span class="rounded-full bg-red-600 text-white px-2 py-0.5 text-[10px] font-bold">Permanently Banned</span></td>
+              <td class="py-3 px-4 text-right">
+                <button onclick="showToast('Ban lifted for badactor@spammer.net')" class="rounded-full border border-emerald-600 text-emerald-600 px-2.5 py-1 text-[11px] font-semibold hover:bg-emerald-500/10">Unban</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 3: SUSPENSIONS & BANS OVERVIEW -->
+    <!-- ========================================================================= -->
+    <div id="content-restrictions" class="tab-content hidden space-y-6">
+      <div class="grid lg:grid-cols-2 gap-6">
+        <!-- Suspended Cards -->
+        <div class="p-6 rounded-3xl border border-[var(--card-border)] bg-[var(--card)] space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-bold flex items-center gap-2">
+              <span class="material-symbols-outlined text-amber-600">pause_circle</span> Active Suspensions
+            </h2>
+            <span class="text-xs text-[var(--muted-foreground)]">Temporary Lockout</span>
+          </div>
+          <div class="space-y-3">
+            <div class="p-4 rounded-2xl border border-amber-600/40 bg-amber-500/10 space-y-2 text-xs">
+              <div class="flex items-center justify-between font-bold">
+                <span class="text-[var(--foreground)]">@kartik.s (Kartik Sharma)</span>
+                <span class="text-amber-700 dark:text-amber-400">Expires in 5 days</span>
+              </div>
+              <p class="text-[var(--muted-foreground)]">Reason: <i class="text-[var(--foreground)]">"Unprofessional remarks in campus hackathon squad team discussion"</i></p>
+              <div class="flex items-center justify-between pt-2 border-t border-[var(--card-border)]">
+                <span class="text-[10px] text-[var(--muted-foreground)]">Issued by Admin @kumar.aditya</span>
+                <button onclick="toggleKartikSuspension()" class="rounded-full bg-emerald-600 text-white px-3 py-1 font-semibold hover:bg-emerald-700 transition">Lift Suspension</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Banned Cards -->
+        <div class="p-6 rounded-3xl border border-[var(--card-border)] bg-[var(--card)] space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-bold flex items-center gap-2">
+              <span class="material-symbols-outlined text-red-600">block</span> Permanent Blacklist
+            </h2>
+            <span class="text-xs text-[var(--muted-foreground)]">Cannot Register/Login</span>
+          </div>
+          <div class="space-y-3">
+            <div class="p-4 rounded-2xl border border-red-600/40 bg-red-500/10 space-y-2 text-xs">
+              <div class="flex items-center justify-between font-bold">
+                <span class="font-mono text-red-900 dark:text-red-300">badactor@spammer.net</span>
+                <span class="text-red-600">Permanent</span>
+              </div>
+              <p class="text-[var(--muted-foreground)]">Reason: <i class="text-[var(--foreground)]">"Automated referral link spamming on lost & found"</i></p>
+              <div class="flex items-center justify-between pt-2 border-t border-[var(--card-border)]">
+                <span class="text-[10px] text-[var(--muted-foreground)]">Banned on 12 Nov 2026</span>
+                <button onclick="showToast('Lifted permanent ban.')" class="rounded-full border border-emerald-600 text-emerald-600 px-3 py-1 font-semibold hover:bg-emerald-500/10">Lift Ban</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 4: FEED POSTS & PINNING -->
+    <!-- ========================================================================= -->
+    <div id="content-posts" class="tab-content hidden space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-bold">Campus Feed Moderation</h2>
+        <span class="text-xs text-[var(--muted-foreground)]">Pin vital updates to top of feed or delete inappropriate content</span>
+      </div>
+
+      <div class="space-y-3">
+        <!-- Post 1 (Pinned) -->
+        <article class="p-5 rounded-3xl border-2 border-amber-500/80 bg-[var(--card)] space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2 text-xs">
+              <span class="font-bold">UniNest Official</span>
+              <span class="rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300 px-2 py-0.5 text-[10px] font-bold">📌 Pinned to Feed</span>
+              <span class="text-[var(--muted-foreground)]">· 2h ago</span>
+            </div>
+            <div class="space-x-1.5">
+              <button onclick="showToast('Post unpinned from top.')" class="rounded-full border border-[var(--card-border)] px-2.5 py-1 text-[11px] font-semibold">Unpin</button>
+              <button onclick="showToast('Removed post.')" class="rounded-full border border-red-600 text-red-600 px-2.5 py-1 text-[11px] font-semibold">Delete</button>
+            </div>
+          </div>
+          <p class="text-sm">Reminder: Sudoon Smart Campus Hackathon registrations close on Friday midnight. Form your squads in the Partners tab.</p>
+        </article>
+
+        <!-- Post 2 -->
+        <article class="p-5 rounded-3xl border border-[var(--card-border)] bg-[var(--card)] space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2 text-xs">
+              <span class="font-bold">@aditi.v</span>
+              <span class="rounded-full bg-neutral-200 dark:bg-neutral-800 px-2 py-0.5 text-[10px]">AI/ML</span>
+              <span class="text-[var(--muted-foreground)]">· 4h ago</span>
+            </div>
+            <div class="space-x-1.5">
+              <button onclick="showToast('Pinned post to top of feed.')" class="rounded-full border border-[var(--card-border)] px-2.5 py-1 text-[11px] font-semibold">Pin to Top</button>
+              <button onclick="showToast('Removed post.')" class="rounded-full border border-red-600 text-red-600 px-2.5 py-1 text-[11px] font-semibold">Delete</button>
+            </div>
+          </div>
+          <p class="text-sm">Looking for 2 teammates skilled with PyTorch and FastAPI for the upcoming Smart Campus telemetry track!</p>
+        </article>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 5: MODERATION REPORTS -->
+    <!-- ========================================================================= -->
+    <div id="content-moderation" class="tab-content hidden space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-bold">Student Moderation Reports (1 Flagged)</h2>
+        <button onclick="showToast('All reports dismissed.')" class="text-xs text-[var(--muted-foreground)] hover:underline">Dismiss All</button>
+      </div>
+
+      <div class="p-5 rounded-3xl border border-red-600/50 bg-red-500/10 space-y-3">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="rounded-full bg-red-600 text-white text-[10px] font-bold px-2 py-0.5">Flagged Comment</span>
+              <span class="text-xs text-[var(--muted-foreground)]">Surface: Feed Post #p142</span>
+            </div>
+            <p class="text-xs text-[var(--muted-foreground)] mt-1">Reported by: <b>@ananya.s</b> (Reason: Harassment / offensive language)</p>
+          </div>
+          <div class="space-x-1.5 flex flex-wrap">
+            <button onclick="showToast('Dismissed report.')" class="rounded-full border border-[var(--card-border)] px-2.5 py-1 text-[11px] font-semibold">Dismiss</button>
+            <button onclick="showToast('Comment deleted.')" class="rounded-full border border-red-600 text-red-600 px-2.5 py-1 text-[11px] font-semibold">Delete Comment</button>
+            <button onclick="showToast('Comment deleted & user suspended for 7 days.')" class="rounded-full bg-amber-600 text-white px-2.5 py-1 text-[11px] font-semibold">Delete & Suspend (7d)</button>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-[var(--card)] border border-[var(--card-border)] text-xs italic">
+          "Quit complaining about lab equipment, some of you don't even belong in engineering."
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 6: AUDIT LOG -->
+    <!-- ========================================================================= -->
+    <div id="content-audit" class="tab-content hidden space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-bold">Administrative Audit Timeline</h2>
+        <span class="text-xs text-[var(--muted-foreground)]">Chronological action log</span>
+      </div>
+
+      <div class="p-6 rounded-3xl border border-[var(--card-border)] bg-[var(--card)] space-y-4 text-xs">
+        <div class="flex items-start gap-3 border-l-2 border-red-900 pl-4 py-1">
+          <div>
+            <div class="font-bold text-[var(--foreground)]">SUSPEND_USER: @kartik.s</div>
+            <p class="text-[var(--muted-foreground)]">Suspended for 7 days. Reason: Inappropriate remarks in discussion.</p>
+            <span class="text-[10px] text-[var(--muted-foreground)]">14 Nov 2026 · by Admin @kumar.aditya</span>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 border-l-2 border-emerald-600 pl-4 py-1">
+          <div>
+            <div class="font-bold text-[var(--foreground)]">VERIFY_STUDENT: @aditi.v</div>
+            <p class="text-[var(--muted-foreground)]">Confirmed university enrollment ID card. Granted verified badge.</p>
+            <span class="text-[10px] text-[var(--muted-foreground)]">13 Nov 2026 · by Admin @kumar.aditya</span>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 border-l-2 border-red-600 pl-4 py-1">
+          <div>
+            <div class="font-bold text-[var(--foreground)]">BAN_USER: badactor@spammer.net</div>
+            <p class="text-[var(--muted-foreground)]">Blacklisted malicious spam bot.</p>
+            <span class="text-[10px] text-[var(--muted-foreground)]">12 Nov 2026 · by Admin @kumar.aditya</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: SUSPEND ID DIALOG -->
+  <!-- ========================================================================= -->
+  <div id="suspendModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+    <div class="w-full max-w-md p-6 rounded-3xl bg-[var(--card)] border border-[var(--card-border)] shadow-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-amber-600 text-2xl">pause_circle</span>
+          <h3 class="text-lg font-bold">Suspend Student ID</h3>
+        </div>
+        <button onclick="closeSuspendModal()" class="text-sm font-bold">✕</button>
+      </div>
+
+      <div class="p-3 rounded-2xl bg-neutral-100 dark:bg-neutral-900 text-xs space-y-1">
+        <div>Target ID: <b id="suspendTargetUid">@aditi.v</b></div>
+        <div>Email: <span id="suspendTargetEmail" class="font-mono">aditi.verma@sudoon.ac.in</span></div>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="font-semibold block mb-1">Suspension Duration</label>
+          <select id="modalDuration" class="w-full rounded-xl border border-[var(--card-border)] bg-[var(--background)] p-2">
+            <option value="1">24 Hours (1 Day Warning)</option>
+            <option value="3">3 Days</option>
+            <option value="7" selected>7 Days (Standard)</option>
+            <option value="14">14 Days (Two Weeks)</option>
+            <option value="30">30 Days (One Month)</option>
+            <option value="0">Indefinite</option>
+          </select>
+        </div>
+        <div>
+          <label class="font-semibold block mb-1">Reason for Suspension</label>
+          <textarea id="modalReason" rows="3" class="w-full rounded-xl border border-[var(--card-border)] bg-[var(--background)] p-2" placeholder="Specify community violation..."></textarea>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeSuspendModal()" class="rounded-full border border-[var(--card-border)] px-4 py-2 text-xs font-semibold">Cancel</button>
+        <button onclick="confirmSuspendAction()" class="rounded-full bg-amber-600 text-white px-4 py-2 text-xs font-semibold hover:bg-amber-700">Confirm Suspension</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: BAN USER DIALOG -->
+  <!-- ========================================================================= -->
+  <div id="banModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+    <div class="w-full max-w-md p-6 rounded-3xl bg-[var(--card)] border border-[var(--card-border)] shadow-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-red-600 text-2xl">block</span>
+          <h3 class="text-lg font-bold">Permanently Ban User</h3>
+        </div>
+        <button onclick="closeBanModal()" class="text-sm font-bold">✕</button>
+      </div>
+
+      <p class="text-xs text-[var(--muted-foreground)]">
+        Permanently blacklists this email address from signing in or registering any ID on UniNest.
+      </p>
+
+      <div class="p-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-xs">
+        Banning: <b id="banTargetEmail" class="font-mono text-red-700 dark:text-red-300">user@email.com</b>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeBanModal()" class="rounded-full border border-[var(--card-border)] px-4 py-2 text-xs font-semibold">Cancel</button>
+        <button onclick="confirmBanAction()" class="rounded-full bg-red-600 text-white px-4 py-2 text-xs font-semibold hover:bg-red-700">Enforce Ban</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Tab Switching
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-red-900', 'text-white', 'shadow-sm');
+        btn.classList.add('text-[var(--muted-foreground)]');
+      });
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+
+      const activeBtn = document.getElementById('tab-' + tabId);
+      const activeContent = document.getElementById('content-' + tabId);
+      if (activeBtn) {
+        activeBtn.classList.add('bg-red-900', 'text-white', 'shadow-sm');
+        activeBtn.classList.remove('text-[var(--muted-foreground)]');
+      }
+      if (activeContent) {
+        activeContent.classList.remove('hidden');
+      }
+    }
+
+    // Toast
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      toastMsg.textContent = msg;
+      toast.classList.remove('hidden');
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 3500);
+    }
+
+    // Maintenance Toggle
+    let isMaint = false;
+    function toggleMaintenance() {
+      isMaint = !isMaint;
+      document.getElementById('maintBadge').classList.toggle('hidden', !isMaint);
+      document.getElementById('maintBtn').textContent = isMaint ? 'Exit Maintenance' : 'Maintenance Mode';
+      showToast(isMaint ? 'Campus Maintenance Mode ENABLED' : 'Campus Maintenance Mode DISABLED');
+    }
+
+    // Filter Users
+    function filterUserTable() {
+      const q = document.getElementById('userSearchInput').value.toLowerCase();
+      const status = document.getElementById('userStatusSelect').value;
+      const rows = document.querySelectorAll('#userTableBody tr');
+
+      rows.forEach(r => {
+        const text = r.textContent.toLowerCase();
+        const matchesQuery = text.includes(q);
+        let matchesStatus = true;
+        if (status === 'verified') matchesStatus = text.includes('verified');
+        if (status === 'suspended') matchesStatus = text.includes('suspended');
+        if (status === 'banned') matchesStatus = text.includes('banned');
+        r.style.display = (matchesQuery && matchesStatus) ? '' : 'none';
+      });
+    }
+
+    // Suspend Modal
+    function openSuspendModal(uid, name, email) {
+      document.getElementById('suspendTargetUid').textContent = '@' + uid + ' (' + name + ')';
+      document.getElementById('suspendTargetEmail').textContent = email;
+      document.getElementById('modalReason').value = 'Violation of community safety policies';
+      document.getElementById('suspendModal').classList.remove('hidden');
+    }
+    function closeSuspendModal() {
+      document.getElementById('suspendModal').classList.add('hidden');
+    }
+    function confirmSuspendAction() {
+      const duration = document.getElementById('modalDuration').value;
+      closeSuspendModal();
+      showToast('Student ID suspended for ' + (duration > 0 ? duration + ' days' : 'Indefinite'));
+    }
+
+    // Ban Modal
+    function openBanModal(email, name) {
+      document.getElementById('banTargetEmail').textContent = email + ' (' + name + ')';
+      document.getElementById('banModal').classList.remove('hidden');
+    }
+    function closeBanModal() {
+      document.getElementById('banModal').classList.add('hidden');
+    }
+    function confirmBanAction() {
+      closeBanModal();
+      showToast('User email permanently blacklisted.');
+    }
+
+    // Lift Kartik Suspension Demo
+    let kartikSusp = true;
+    function toggleKartikSuspension() {
+      kartikSusp = !kartikSusp;
+      const badge = document.getElementById('badge-kartik');
+      const btn = document.getElementById('btn-kartik-susp');
+      const row = document.getElementById('row-kartik');
+      if (kartikSusp) {
+        badge.textContent = 'Suspended (7d)';
+        badge.className = 'rounded-full bg-amber-600 text-white px-2 py-0.5 text-[10px] font-bold';
+        btn.textContent = 'Lift Suspension';
+        row.className = 'bg-amber-500/5 hover:bg-amber-500/10 transition';
+        showToast('Kartik Sharma (@kartik.s) suspended.');
+      } else {
+        badge.textContent = 'Active ID';
+        badge.className = 'rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-0.5 text-[10px] font-bold';
+        btn.textContent = 'Suspend ID';
+        row.className = 'hover:bg-neutral-50 dark:hover:bg-neutral-900/40 transition';
+        showToast('Suspension lifted for @kartik.s. Full access restored.');
+      }
+    }
+  </script>
+</body>
+</html>
